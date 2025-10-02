@@ -1,0 +1,1 @@
+TRUNCATE TABLE datahouse.public.{{ table_name }};

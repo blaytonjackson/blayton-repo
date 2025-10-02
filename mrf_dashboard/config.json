@@ -1,0 +1,48 @@
+{
+    "s3_bucket": "turquoise-health-payer-export-main",
+    "parent_directory": "bcj_claims_data_testing",
+    "dashboard_components": [
+        {
+            "customer_labels": {
+                "subdirectory_name": "customer_labels",
+                "file_name": "mrf_claims_dashboard_customer_names.csv",
+                "table_name": "mrf_claims_dashboard_customer_names",
+                "query": "SELECT DISTINCT table_schema as customer_database FROM information_schema.tables WHERE table_schema ILIKE '%customer%' ORDER BY table_schema ASC",
+                "staging_table_query": "CREATE TABLE datahouse.public.mrf_claims_dashboard_customer_names (customer_name VARCHAR);",
+                "truncate_query": "TRUNCATE TABLE datahouse.public.{table_name};",
+                "copy_query": "COPY datahouse.public.{table_name} FROM 's3://turquoise-health-payer-export-main/bcj_claims_data_testing/customer_labels' IAM_ROLE '{role}' TRUNCATECOLUMNS FORMAT AS CSV DELIMITER ',' IGNOREHEADER 1;"
+            }
+        },
+        {
+            "file_ingestion": {
+                "subdirectory_name": "file_ingestion",
+                "file_name": "mrf_claims_dashboard_ingestion_metadata.csv",
+                "table_name": "mrf_claims_dashboard_file_ingestion_metadata",
+                "query": "SELECT * FROM claims.public.management_customer_files mcf ORDER BY parsed_at desc",
+                "staging_table_query":"CREATE TABLE datahouse.public.mrf_claims_dashboard_file_ingestion_metadata (id VARCHAR, file_path text, file_size VARCHAR, file_type VARCHAR, has_835 boolean, has_837 boolean, is_broken boolean, is_parsed boolean, is_processed boolean, is_removed boolean, is_ready_to_be_removed boolean, created_at timestamp, parsed_at timestamp, remove_at timestamp, parsing_process_id VARCHAR, error_message VARCHAR, has_errors boolean, error_type VARCHAR, customer_name VARCHAR)",
+                "truncate_query": "TRUNCATE TABLE datahouse.public.{table_name};",
+                "copy_query": "COPY datahouse.public.{table_name} FROM 's3://turquoise-health-payer-export-main/bcj_claims_data_testing/file_ingestion' IAM_ROLE '{role}' TRUNCATECOLUMNS FORMAT AS CSV DELIMITER ',' IGNOREHEADER 1;"
+            }
+        }],
+    "dashboard_analysis": [
+        {
+            "stats_835_837": {
+                "subdirectory_name": "table_835_837_data",
+                "file_name": "835_837_stats_{customer_schema}.csv",
+                "table_name": "mrf_claims_dashboard_835_837_stats",
+                "products_org_id_query": "SELECT DISTINCT MIN(b.id) AS organization_id, b.name AS org_name FROM public.tq_organizations_organization_products a JOIN public.tq_organizations_organization b ON a.organization_id = b.id WHERE a.product_id = 2 AND b.parent_id IS NULL AND b.is_active = true GROUP BY b.name;",      
+                "contract_model_query": "select distinct MIN(organization_id) as organization_id,name,npi from public.contracting_platform_modeling_contractingprovider cpmc GROUP BY name, npi;",
+                "query_837": "WITH ranges_cte AS (SELECT * FROM (SELECT TO_CHAR(service_start_date, 'Mon YYYY') AS monthyear, billing_provider_id, COUNT(*) AS total_records FROM claims.{customer_schema}.imported_837s WHERE billing_provider_id IS NOT NULL GROUP BY TO_CHAR(service_start_date, 'Mon YYYY'), billing_provider_id) aa WHERE total_records > 50) SELECT '{customer_schema}' AS customer_name, b.billing_provider_id AS npi_837, MIN(service_start_date) AS min_date_837, MAX(service_start_date) AS max_date_837, COUNT(*) AS records_837 FROM claims.{customer_schema}.imported_837s b JOIN ranges_cte c ON b.billing_provider_id = c.billing_provider_id AND TO_CHAR(b.service_start_date, 'Mon YYYY') = c.monthyear GROUP BY b.billing_provider_id;",
+                "query_835": "WITH ranges_cte AS (SELECT * FROM (SELECT TO_CHAR(service_date, 'Mon YYYY') AS monthyear, COALESCE(provider_npi, payee_id_1000b) AS provider_npi, COUNT(*) AS total_records FROM claims.{customer_schema}.imported_835s WHERE COALESCE(provider_npi, payee_id_1000b) IS NOT NULL GROUP BY TO_CHAR(service_date, 'Mon YYYY'), COALESCE(provider_npi, payee_id_1000b)) aa WHERE total_records > 50) SELECT '{customer_schema}' AS customer_name, COALESCE(b.provider_npi, payee_id_1000b) AS npi_835, MIN(service_date) AS min_date_835, MAX(service_date) AS max_date_835, COUNT(*) AS records_835 FROM claims.{customer_schema}.imported_835s b JOIN ranges_cte c ON COALESCE(b.provider_npi, payee_id_1000b) = c.provider_npi AND TO_CHAR(b.service_date, 'Mon YYYY') = c.monthyear GROUP BY COALESCE(b.provider_npi, payee_id_1000b);",
+                "customer_query": "SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'customer_%' AND schema_name != 'information_schema';",
+                "staging_table_query": "CREATE TABLE datahouse.public.mrf_claims_dashboard_835_837_stats (organization_id VARCHAR, name VARCHAR, npi VARCHAR, org_name VARCHAR, customer_name VARCHAR, npi_835 VARCHAR, min_date_835 TIMESTAMP, max_date_835 TIMESTAMP, records_835 DECIMAL(34,2), npi_837 VARCHAR, min_date_837 TIMESTAMP, max_date_837 TIMESTAMP, records_837 DECIMAL(34,2));",
+                "truncate_query": "TRUNCATE TABLE datahouse.public.{table_name};",
+                "copy_query": "COPY datahouse.public.{table_name} FROM 's3://turquoise-health-payer-export-main/bcj_claims_data_testing/table_835_837_data' IAM_ROLE '{role}' TRUNCATECOLUMNS FORMAT AS CSV DELIMITER ',' IGNOREHEADER 1;"
+
+            }
+        }
+    ]
+}
+
+
+
