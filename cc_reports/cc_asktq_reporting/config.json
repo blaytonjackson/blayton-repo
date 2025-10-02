@@ -1,0 +1,15 @@
+{
+    "organization_id":"'28'",
+    "output_directory":"Documents/solution_engineering/cc_reports/cc_asktq_reporting/output",
+    "template_directory": "Documents/solution_engineering/cc_reports/cc_asktq_reporting/sql_templates",
+    "tag_ids": [64,65,68,70,89,686,164,801,73,69],
+    "customer_abbreviation": "csh",
+    "sftp_creds":
+        {
+        "sftp_host": "sftp-hipaa.turquoise.health",
+        "sftp_port": 22,
+        "remote_output": "/turquoise-output",
+        "parent_directory": "ask_tq_reports",
+        "local_path": "Documents/solution_engineering/cc_reports/cc_asktq_reporting/output"
+        }
+}
